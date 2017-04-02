@@ -7,8 +7,8 @@ public class SkyScrapersReal {
 
   static int remainingSquares = 0;
   static List<Set<Integer>> candidates;
-  static List<Set<Integer>> canRows = new ArrayList<Set<Integer>>();
-  static List<Set<Integer>> canCols = new ArrayList<Set<Integer>>();;
+  // static List<Set<Integer>> canRows = new ArrayList<Set<Integer>>();
+  // static List<Set<Integer>> canCols = new ArrayList<Set<Integer>>();;
   static Set<Integer> defaultSet;
 
   static int[] nextMin = new int[2];
@@ -27,7 +27,7 @@ public class SkyScrapersReal {
   public static int[][] solvePuzzle(int[] clues) {
     dim = (clues.length + 1) / SIDES_ON_SQUARE;
 
-    int[][] solution = new int[dim][dim]; // squash the solution array
+    int[][] solution = new int[dim][dim];
 
     finished = false;
     iterations = 0;
@@ -36,8 +36,8 @@ public class SkyScrapersReal {
     defaultSet = new HashSet<Integer>(dim);
     for (int i = 0; i < dim; i++) {
       defaultSet.add(i + 1);
-      canRows.add(new HashSet<Integer>(dim));
-      canCols.add(new HashSet<Integer>(dim));
+      // canRows.add(new HashSet<Integer>(dim));
+      // canCols.add(new HashSet<Integer>(dim));
     }
     for (int i = 0; i < dim*dim; i++) {
       candidates.add(new HashSet<Integer>(6));
@@ -128,9 +128,7 @@ public class SkyScrapersReal {
         Set<Integer> rowColValues = getRowColValues(solution, i, j);
         Set<Integer> set = candidates.get(k);
         set.addAll(defaultSet);
-        for (int val : rowColValues) {
-          set.remove(val);
-        }
+        set.removeAll(rowColValues);
         if (set.size() == 0) {
           return failResult;
         }
