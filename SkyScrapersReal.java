@@ -7,11 +7,10 @@ public class SkyScrapersReal {
 
   static int remainingSquares = 0;
   static List<Set<Integer>> candidates;
-  // static List<Set<Integer>> canRows = new ArrayList<Set<Integer>>();
-  // static List<Set<Integer>> canCols = new ArrayList<Set<Integer>>();;
   static Set<Integer> defaultSet;
 
   static int[] nextMin = new int[2];
+  static int rowColCalls = 0;
 
   static Boolean changedSinceLastUpdate = true;
   static final int SIDES_ON_SQUARE = 4;
@@ -36,15 +35,14 @@ public class SkyScrapersReal {
     defaultSet = new HashSet<Integer>(dim);
     for (int i = 0; i < dim; i++) {
       defaultSet.add(i + 1);
-      // canRows.add(new HashSet<Integer>(dim));
-      // canCols.add(new HashSet<Integer>(dim));
     }
     for (int i = 0; i < dim*dim; i++) {
-      candidates.add(new HashSet<Integer>(6));
+      candidates.add(new HashSet<Integer>(dim));
     }
     backtrack(solution, clues);
     printArr(solution);
     System.out.println("Iterations: " + iterations);
+    System.out.println("rowColCalls: " + rowColCalls);
     System.out.println("SOlved");
 
     return solution;
@@ -120,21 +118,16 @@ public class SkyScrapersReal {
     // }
     changedSinceLastUpdate = false;
 
-    // remove everyone in the same row or col excluding itself...
-
-    for (int i = 0; i < dim; i++) {
-      for (int j = 0; j < dim; j++) {
+    for (int i = 0; i < solution.length; i++) {
+      for (int j = 0; j < solution.length; j++) {
         int k = getK(i, j);
-        Set<Integer> rowColValues = getRowColValues(solution, i, j);
-        Set<Integer> set = candidates.get(k);
-        set.addAll(defaultSet);
-        set.removeAll(rowColValues);
-        if (set.size() == 0) {
-          return failResult;
-        }
-        candidates.set(k, set);
+        // Set<Integer> set = candidates.get(k);
+        // set.addAll(defaultSet);
+        candidates.set(k, new HashSet<Integer>(defaultSet));
       }
     }
+
+    // remove everyone in the same row or col excluding itself...
 
     // Also if a column or row has sets both only allow the same value that can't be
     // ie if there are 2 open spaces and both of them can only be 3's
@@ -334,11 +327,11 @@ public class SkyScrapersReal {
       for (int j = 0; j < dim; j++) {
         int k = getK(i, j);
         Set<Integer> set = candidates.get(k);
+        Set<Integer> rowColValues = getRowColValues(solution, i, j);
+        set.removeAll(rowColValues);
         int setSize = set.size();
         if (setSize == 0) {
-          result[0] = -1;
-          result[1] = -1;
-          return result;
+          return failResult;
         } else if (solution[i][j] == 0 && setSize < minSize) {
           // Add a second largest field;
           if (minSize != Integer.MAX_VALUE) {
@@ -349,6 +342,7 @@ public class SkyScrapersReal {
           result[0] = i;
           result[1] = j;
         }
+        candidates.set(k, set);
       }
     }
 
@@ -452,6 +446,7 @@ public class SkyScrapersReal {
   }
 
   public static Set<Integer> getRowColValues(int[][] solution, int iPos, int jPos) {
+    rowColCalls++;
     Set<Integer> set = new HashSet<Integer>();
     for (int i = 0; i < dim; i++) {
       for (int j = 0; j < dim; j++) {
