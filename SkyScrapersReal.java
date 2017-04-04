@@ -7,10 +7,13 @@ public class SkyScrapersReal {
 
   static int remainingSquares = 0;
   static List<Set<Integer>> candidates;
+  static List<Set<Integer>> rowVals;
+  static List<Set<Integer>> colVals;
   static Set<Integer> defaultSet;
 
   static int[] nextMin = new int[2];
   static int rowColCalls = 0;
+  static int[] ruleUses = new int[20];
 
   static Boolean changedSinceLastUpdate = true;
   static final int SIDES_ON_SQUARE = 4;
@@ -32,18 +35,24 @@ public class SkyScrapersReal {
     iterations = 0;
     remainingSquares = dim * dim;
     candidates = new ArrayList<Set<Integer>>(dim * dim);
+    rowVals = new ArrayList<Set<Integer>>(dim);
+    colVals = new ArrayList<Set<Integer>>(dim);
     defaultSet = new HashSet<Integer>(dim);
     for (int i = 0; i < dim; i++) {
       defaultSet.add(i + 1);
+      rowVals.add(new HashSet<Integer>(dim));
+      colVals.add(new HashSet<Integer>(dim));
     }
     for (int i = 0; i < dim*dim; i++) {
       candidates.add(new HashSet<Integer>(dim));
     }
+
     backtrack(solution, clues);
     printArr(solution);
     System.out.println("Iterations: " + iterations);
-    System.out.println("rowColCalls: " + rowColCalls);
+    // System.out.println("rowColCalls: " + rowColCalls);
     System.out.println("SOlved");
+    System.out.println(Arrays.toString(ruleUses));
 
     return solution;
   }
@@ -55,6 +64,7 @@ public class SkyScrapersReal {
       return;
     } else {
       int[] ij = getNextSquare(solution, clues);
+
       int i = ij[0];
       int j = ij[1];
 
@@ -71,22 +81,33 @@ public class SkyScrapersReal {
       Set<Integer> candidatesForK = candidates.get(k);
       // System.out.println(Arrays.toString(candidatesForK.toArray()));
       // To avoid concurrentHashMapModifications
+      if (candidatesForK.size() > 1) {
+        // we're guessing here
+        // System.out.println("FORK");
+        // debugSets();
+        // printArr(solution);
+        // try {
+        //   Thread.sleep(3000);
+        // } catch (Exception e) {};
+      }
       int[] iterate = new int[candidatesForK.size()];
-      int index = 0;
+      int index = candidatesForK.size() - 1;
       for(int kCandidate: candidatesForK) {
         iterate[index] = kCandidate;
-        index++;
+        index--;
       }
 
       List<Move> moves = new ArrayList<Move>();
       for (int newVal : iterate) {
         iterations++;
         makeMoves(solution, i, j, newVal, moves, clues);
+        if (solution[0][0] == 1 && solution[0][1] == 6 && solution[0][2] == 4) {
+          // debug(solution);
+          // try {
+          //   Thread.sleep(1000);
+          // } catch (Exception e) {}
+        }
 
-        // debug(solution);
-        // try {
-        //   Thread.sleep(1000);
-        // } catch (Exception e) {}
 
         backtrack(solution, clues);
 
@@ -121,9 +142,14 @@ public class SkyScrapersReal {
     for (int i = 0; i < solution.length; i++) {
       for (int j = 0; j < solution.length; j++) {
         int k = getK(i, j);
-        // Set<Integer> set = candidates.get(k);
+        Set<Integer> set = candidates.get(k);
+        for (int d = 1; d <= dim; d++) {
+          if (!set.contains(d)) {
+            set.add(d);
+          }
+        }
         // set.addAll(defaultSet);
-        candidates.set(k, new HashSet<Integer>(defaultSet));
+        // candidates.set(k, new HashSet<Integer>(defaultSet));
       }
     }
 
@@ -151,7 +177,14 @@ public class SkyScrapersReal {
         List<Integer> arr = Arrays.asList(clueMax);
 
         set.retainAll(arr);
-      } else if (clueVal == clueMax) {
+        // if (solution[ij[0]][ij[1]] == 0 && set.size() == 1) {
+        //   return ij;
+        // }
+      } else if (clueVal == clueMax) { // this is a specific rule that can be made general!
+        // if max is 5 positions away and you can see 5 positions...
+        // well then there are only a few configurations..
+        // If the value after max is known then the remaiing must be in ascendign order...
+
         // only one possibile value for dim squares
         for (int m = 0; m < clueMax; m++) {
           Set<Integer> newSet = new HashSet<Integer>();
@@ -159,22 +192,21 @@ public class SkyScrapersReal {
           int[] ij = getIAndJByClueNum(clueNum, m);
           int k = getK(ij[0], ij[1]);
           candidates.get(k).retainAll(newSet);
+          if (solution[ij[0]][ij[1]] == 0 && candidates.get(k).size() == 1) {
+            return ij;
+          }
         }
       } else {
-        //
-
         // if one zero logic
         int zeroCount = 0;
         int zeroCountBeforeMax = 0;
+        int zeroCountAfterMax = 0;
         int firstZeroIndex = -1;
         int maxHeight = -1;
         int maxHeightIndex = -1;
         int[] rowCol = getRowCol(solution, clueNum);
         int visibleBuildings = 0;
         int buildingsVisibleBeforeZero = 0;
-        int buildingsVisibleAfterZeroBeforeMax = 0;
-
-
 
         int maxBeforeFirstZero = -1;
         int maxAfterFirstZeroBeforeMax = -1;
@@ -199,7 +231,7 @@ public class SkyScrapersReal {
         }
         for (int i = 0; i < rowCol.length; i++) {
           int val = rowCol[i];
-          if (val != 0 && i < firstZeroIndex && firstZeroIndex != -1 && i < maxHeightIndex) {
+          if (val != 0 && i < firstZeroIndex && firstZeroIndex != -1 && i < maxHeightIndex && maxHeightIndex != -1) {
             if (val > maxBeforeFirstZero) {
               maxBeforeFirstZero = val;
             }
@@ -208,79 +240,147 @@ public class SkyScrapersReal {
           if (val == 0 && i < maxHeightIndex) {
             zeroCountBeforeMax++;
           }
-          if (val != 0 && i > firstZeroIndex && firstZeroIndex != -1 && i < maxHeightIndex) {
-            buildingsVisibleAfterZeroBeforeMax++;
+          if (val == 0 && i > maxHeightIndex) {
+            zeroCountAfterMax++;
           }
         }
 
         for (int i = 0; i < rowCol.length; i++) {
           int val = rowCol[i];
-          if (i > firstZeroIndex && i < maxHeightIndex && val > maxBeforeFirstZero) {
+          if (firstZeroIndex != -1 && i > firstZeroIndex && i < maxHeightIndex
+            && val > maxBeforeFirstZero && val > maxAfterFirstZeroBeforeMax) {
             maxAfterFirstZeroBeforeMax = val;
           }
         }
 
-        // now fuck around with these vaaars yo
-        // if (clueVal == visibleBuildings) {
-
-        // }
-
-        // if we know the max before the zero and the max after the zero// and either there's only one zero or a max==dim buildings behind
-        // then the zero has to be between the maxBefore and the min larger than if we need one more sisbleCOunt
-        // if we need the same visible count it ahs to be shorter than maxBefore
+        int visibleMinAfterFirstZero = -1;
+        for (int i = 0; i < rowCol.length; i++) {
+          int val = rowCol[i];
+          if (firstZeroIndex != -1 && i > firstZeroIndex && i < maxHeightIndex
+            && val > maxBeforeFirstZero && visibleMinAfterFirstZero == 0) {
+            maxAfterFirstZeroBeforeMax = val;
+          }
+        }
 
         if (visibleBuildings + zeroCount < clueVal) {
+          ruleUses[0]++;
           return failResult;
         }
 
-        // wall in the back
-        if (zeroCount == 1 && clueVal - 1 > visibleBuildings) {
+        if (maxHeightIndex + 1 - (maxHeight - dim) < clueVal) {
+          ruleUses[1]++;
           return failResult;
         }
+
         if (clueVal - zeroCount > visibleBuildings && zeroCountBeforeMax == 0 && maxHeight == dim) {
+          ruleUses[2]++;
           return failResult;
-        }
-        if (firstZeroIndex != -1 && maxHeightIndex != -1 && firstZeroIndex < maxHeightIndex && maxHeight == dim && zeroCountBeforeMax == 1) { // the same applies for
-          int[] ij = getIAndJByClueNum(clueNum, firstZeroIndex);
-          int k = getK(ij[0], ij[1]);
-          Set<Integer> firstZeroCandidates = candidates.get(k);
-          // System.out.println("clueVal" + clueVal);
-          // System.out.println(Arrays.toString(firstZeroCandidates.toArray()));
-          // System.out.println(Arrays.toString(rowCol));
-
-          for (Iterator<Integer> i = firstZeroCandidates.iterator(); i.hasNext();) {
-            int iter = i.next();
-            if (visibleBuildings == clueVal && iter < maxAfterFirstZeroBeforeMax &&  iter > maxBeforeFirstZero && iter < maxAfterFirstZeroBeforeMax && maxBeforeFirstZero != -1) {
-              i.remove();
-            } else if (visibleBuildings < clueVal && (iter < maxBeforeFirstZero || iter > maxAfterFirstZeroBeforeMax)) { //  we need to add one in between
-              // i.remove();
-            } else if (visibleBuildings > clueVal && iter < maxAfterFirstZeroBeforeMax) {
-              // i.remove();
-            }
-          }
-          if (firstZeroCandidates.size() == 0) {
-            return failResult;
-          }
-
-          // if (visibleBuildings > clueVal) {
-            // we need the zero to become a new max
-            // to cover up some guys behind it
-          // }
-
         }
 
         // there aren't any zeroes before the max and it doesn't match up
         if (maxHeight == dim && zeroCountBeforeMax == 0 && visibleBuildings != clueVal) {
+          ruleUses[3]++;
           return failResult;
         }
+
+        if (maxHeight == dim && visibleBuildings + zeroCountBeforeMax < clueVal) {
+          ruleUses[4]++;
+          return failResult;
+        }
+
+        if (maxHeight != dim && zeroCountAfterMax + visibleBuildings + zeroCountBeforeMax < clueVal) {
+          ruleUses[5]++;
+          return failResult;
+        }
+
+        if (dim - maxHeight + zeroCountAfterMax + zeroCountBeforeMax + visibleBuildings < clueVal) {
+          return failResult;
+        }
+
+        if (maxHeight == dim && maxHeightIndex + 1 == clueVal && zeroCountAfterMax == 0 && zeroCountBeforeMax != 0) {
+          ruleUses[6]++;
+
+          // debug(solution);
+          // System.out.println(Arrays.toString(rowCol));
+          // System.out.println("clueVal:" + clueVal);
+          // try {
+          //   Thread.sleep(5000);
+          // } catch (Exception e) {};
+          // we konw what all teh buildigns are right...
+          Set<Integer> afterZero = new HashSet<Integer>();
+          for (int m = maxHeightIndex + 1; m < dim; m++) {
+            afterZero.add(rowCol[m]);
+          }
+          int safeVal = 1;
+          for (int m = 0; m < maxHeightIndex; m++) {
+            while (afterZero.contains(safeVal)) {
+              safeVal++;
+            }
+            Set<Integer> newSet = new HashSet<Integer>();
+            newSet.add(safeVal);
+            safeVal++;
+            int[] ij = getIAndJByClueNum(clueNum, m);
+            int k = getK(ij[0], ij[1]);
+            Set<Integer> ogSet = candidates.get(k);
+            ogSet.retainAll(newSet);
+            if (ogSet.size() == 0) {
+              return failResult;
+            }
+
+            // if (solution[ij[0]][ij[1]] == 0 && candidates.get(k).size() == 1) {
+            //   return ij;
+            // }
+          }
+
+        }
+
 
 
         // if you have a really tall tower early on some clues can't work
         // you can have a tower that worsk for you in every space in front so the criteria is less
         // strict if you push it farther abck or the tower isnot as tall
         if (maxHeightIndex != -1 && dim - maxHeight + 1 < clueVal - maxHeightIndex) {
+          ruleUses[7]++;
           return failResult;
         }
+
+        if (firstZeroIndex != -1 && maxHeightIndex != -1 &&
+         firstZeroIndex < maxHeightIndex && maxHeight == dim && zeroCountBeforeMax == 1) { // the same applies for
+          int[] ij = getIAndJByClueNum(clueNum, firstZeroIndex);
+          int k = getK(ij[0], ij[1]);
+          Set<Integer> firstZeroCandidates = candidates.get(k);
+
+          for (Iterator<Integer> i = firstZeroCandidates.iterator(); i.hasNext();) {
+            int newVal = i.next();
+            if (visibleBuildings == clueVal) {
+              if (visibleMinAfterFirstZero != -1 && visibleMinAfterFirstZero > newVal
+                && maxBeforeFirstZero != -1 && maxBeforeFirstZero < newVal) {
+                i.remove();
+              }
+            } else if (visibleBuildings > clueVal) { // we need to decrease visible buildings
+              // place a building higher than the max after first zero
+              // and greater than the first visible building
+              if (maxAfterFirstZeroBeforeMax != -1 && maxAfterFirstZeroBeforeMax > newVal
+                 && visibleMinAfterFirstZero != -1 && newVal > visibleMinAfterFirstZero) {
+                i.remove();
+              }
+            } else if (visibleBuildings < clueVal) {
+              if (maxBeforeFirstZero != -1 && maxBeforeFirstZero > newVal) {
+                i.remove(); // we can't be between them because we'll increase visible buildins
+              }
+            }
+          }
+
+          if (firstZeroCandidates.size() == 0) {
+            ruleUses[8]++;
+            return failResult;
+          } else if (firstZeroCandidates.size() == 1) {
+            return ij;
+          }
+
+        }
+
+
 
 
         // there is one zero before the max
@@ -300,77 +400,113 @@ public class SkyScrapersReal {
         // }
 
         // there is one zero
-        if (zeroCount == 1 || (zeroCountBeforeMax == 1 && maxHeight == dim)) { //maxHeight == dim && zeroCountBeforeMax == 1) {
-          // try each of the candidates at that location
-          // remove the ones that don't lead to a good visibleCount
-          // what's the ij of the spot we're looking at
-          int[] ij = getIAndJByClueNum(clueNum, firstZeroIndex);
-          int k = getK(ij[0], ij[1]);
-          for (Iterator<Integer> i = candidates.get(k).iterator(); i.hasNext();) {
-            rowCol[firstZeroIndex] = i.next();
-            if (getVisibleBuildings(rowCol) != clueVal) {
-                i.remove();
-            }
-          }
-          if (candidates.get(k).size() == 0) {
-            return failResult;
-          }
-          rowCol[firstZeroIndex] = 0;
-        }
+        // if (zeroCount == 1 || (zeroCountBeforeMax == 1 && maxHeight == dim)) { //maxHeight == dim && zeroCountBeforeMax == 1) {
+        //   // try each of the candidates at that location
+        //   // remove the ones that don't lead to a good visibleCount
+        //   // what's the ij of the spot we're looking at
+        //   int[] ij = getIAndJByClueNum(clueNum, firstZeroIndex);
+        //   int k = getK(ij[0], ij[1]);
+        //   for (Iterator<Integer> i = candidates.get(k).iterator(); i.hasNext();) {
+        //     rowCol[firstZeroIndex] = i.next();
+        //     if (getVisibleBuildings(rowCol) != clueVal) {
+        //         i.remove();
+        //     }
+        //   }
+        //   if (candidates.get(k).size() == 0) {
+        //     return failResult;
+        //   }
+        //   rowCol[firstZeroIndex] = 0;
+        // }
 
-      }
-    }
-
-    int minSize = Integer.MAX_VALUE;
-
-    for (int i = 0; i < dim; i++) {
-      for (int j = 0; j < dim; j++) {
-        int k = getK(i, j);
-        Set<Integer> set = candidates.get(k);
-        Set<Integer> rowColValues = getRowColValues(solution, i, j);
-        set.removeAll(rowColValues);
-        int setSize = set.size();
-        if (setSize == 0) {
-          return failResult;
-        } else if (solution[i][j] == 0 && setSize < minSize) {
-          // Add a second largest field;
-          if (minSize != Integer.MAX_VALUE) {
-            nextMin[0] = result[0];
-            nextMin[1] = result[1];
-          }
-          minSize = setSize;
-          result[0] = i;
-          result[1] = j;
-        }
-        candidates.set(k, set);
       }
     }
 
     // update aggregate columns
+    for (int i = 0; i < dim; i++) {
+      rowVals.get(i).clear();
+    }
+    for (int j = 0; j < dim; j++) {
+      colVals.get(j).clear();
+    }
+    for (int i = 0; i < dim; i++) {
+      for (int j = 0; j < dim; j++) {
+        int val = solution[i][j];
+        // if (rowVals.get(i).contains(val) || colVals.get(j).contains(val)) {
+        //   return failResult;
+        // } else {
+        if (val != 0) {
+          rowVals.get(i).add(solution[i][j]);
+          colVals.get(j).add(solution[i][j]);
+        }
+        // }
+      }
+    }
 
-      // for (int i = 0; i < dim; i++) {
-      //   canCols.get(i).clear();
-      //   canRows.get(i).clear();
-      // }
+    int minSize = Integer.MAX_VALUE;
+    // int rowColMax = dim;
+    for (int i = 0; i < dim; i++) {
 
-      // for (int i = 0; i < dim; i++) {
-      //   for (int j = 0; j < dim; j++) {
-      //     int k = getK(i,j);
-      //     Set<Integer> cans = candidates.get(k);
-      //     canCols.get(i).addAll(candidates.get(k));
-      //     canRows.get(j).addAll(candidates.get(k));
-      //   }
-      // }
+    }
+    for (int i = 0; i < dim; i++) {
+      Set<Integer> rowValsForI = rowVals.get(i);
+      for (int j = 0; j < dim; j++) {
+        int k = getK(i, j);
+        Set<Integer> set = candidates.get(k);
+        // Set<Integer> rowColValues = getRowColValues(solution, i, j);
+        // set.removeAll(rowColValues);
 
-      // for (int i = 0; i < dim; i++) {
-      //   Boolean fail = false;
-      //   if (!canCols.get(i).equals(defaultSet)) {
-      //      return failResult;
-      //   }
-      //   if (!canRows.get(i).equals(defaultSet)) {
-      //      return failResult;
-      //   }
-      // }
+        int val = solution[i][j];
+        Boolean hasVal = set.contains(val);
+        // if (val == 0) {
+          for (int el : rowValsForI) {
+            set.remove(el);
+          }
+          Set<Integer> rowValsForJ = colVals.get(j);
+          for (int el : rowValsForJ) {
+            set.remove(el);
+          }
+          if (hasVal) {
+            set.add(val);
+          }
+          // set.removeAll(rowVals.get(i));
+          // set.removeAll(colVals.get(j));
+        // } else if (set.contains(val)) {
+        //   set.removeAll(rowVals.get(i));
+        //   set.removeAll(colVals.get(j));
+        //   set.add(val);
+        // } else
+        if (val != 0 && !hasVal) {
+          ruleUses[9]++;
+          return failResult;
+        }
+        // if (solution[i][j] != 0 && set.contains(solution[i][j])) {
+        // } else {
+
+        // }
+
+
+        int setSize = set.size();
+        int rowVal = 0;
+        if (setSize == 0) {
+          return failResult;
+        } else if (solution[i][j] == 0 && setSize < minSize) {
+          // Add a second largest field;
+          // if (minSize != Integer.MAX_VALUE) {
+          //   nextMin[0] = result[0];
+          //   nextMin[1] = result[1];
+          // }
+          minSize = setSize;
+          result[0] = i;
+          result[1] = j;
+          // maxValInSet = rowColValues.size();
+        } else if (solution[i][j] == 0 && setSize - 1 <= minSize && set.contains(dim)) {
+          result[0] = i;
+          result[1] = j;
+          // rowColMax = rowColValues.size();
+        }
+        candidates.set(k, set);
+      }
+    }
 
     return result;
   }
@@ -449,16 +585,16 @@ public class SkyScrapersReal {
     rowColCalls++;
     Set<Integer> set = new HashSet<Integer>();
     for (int i = 0; i < dim; i++) {
-      for (int j = 0; j < dim; j++) {
-        if (i == iPos && j == jPos) {
-          continue;
-        } else if (i == iPos) {
-          set.add(solution[i][j]);
-        } else if (j == jPos) {
-          set.add(solution[i][j]);
-        }
+      if (i != iPos) {
+        set.add(solution[i][jPos]);
       }
     }
+    for (int j = 0; j < dim; j++) {
+      if (j != jPos) {
+        set.add(solution[iPos][j]);
+      }
+    }
+
     return set;
   }
 

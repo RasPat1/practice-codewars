@@ -19,10 +19,10 @@ public class UploadedSkyScrapersTest {
        0, 0, 0, 0, 0, 1,
        0, 3, 0, 3, 2, 3,
        3, 2, 0, 3, 1, 0},
-      {0, 3, 0, 3, 2, 3,
-       3, 2, 0, 3, 1, 0,
-       0, 3, 0, 5, 3, 4,
-       0, 0, 0, 0, 0, 1}};
+      {4, 3, 2, 5, 1, 5,
+       2, 2, 2, 2, 3, 1,
+       1, 3, 2, 3, 3, 3,
+       5, 4, 1, 2, 3, 4 }};
 
   static int[][][] outcomes = {
     {
@@ -50,49 +50,85 @@ public class UploadedSkyScrapersTest {
       {1, 5, 4, 3, 2, 6}
     },
     {
-      {6, 2, 3, 4, 5, 1},
-      {5, 1, 6, 2, 3, 4},
-      {4, 3, 5, 1, 6, 2},
-      {2, 6, 4, 5, 1, 3},
-      {1, 5, 2, 3, 4, 6},
-      {3, 4, 1, 6, 2, 5}
+      {3, 4, 5, 1, 6, 2},
+      {4, 5, 6, 2, 1, 3},
+      {5, 6, 1, 3, 2, 4},
+      {6, 1, 2, 4, 3, 5},
+      {2, 3, 4, 6, 5, 1},
+      {1, 2, 3, 5, 4, 6}
     }
   };
 
+  // @Test
+  // public void speedTest () {
+  //   long start = System.currentTimeMillis();
+  //   assertEquals(turnOutcome(outcomes[2], 2), SkyScrapersReal.solvePuzzle(turnClues(clues[2], 2)));
+  //   long end = System.currentTimeMillis();
+  //   System.out.println("Time:" + (end - start));
+  // }
+
+  // @Test
+  // public void speedTest2 () {
+  //   long start = System.currentTimeMillis();
+  //   assertEquals(turnOutcome(outcomes[3], 1), SkyScrapersReal.solvePuzzle(turnClues(clues[3], 1)));
+  //   long end = System.currentTimeMillis();
+  //   System.out.println("Time:" + (end - start));
+  // }
+
   @Test
-  public void speedTest () {
-    long start = System.currentTimeMillis();
-    assertEquals(turnOutcome(outcomes[2], 2), UploadedSkyScraper.solvePuzzle(turnClues(clues[2], 2)));
-    long end = System.currentTimeMillis();
-    System.out.println("Time:" + (end - start));
+  public void testSolvePuzzle () {
+    for (int i = 0; i < clues.length; i++) {
+      long start = System.currentTimeMillis();
+        assertEquals(outcomes[i], UploadedSkyScraper.solvePuzzle(clues[i]));
+        long end = System.currentTimeMillis();
+        System.out.println("Time:" + (end - start));
+        if (end - start > 1000) {
+          System.out.println("i" + i);
+          System.out.println(Arrays.toString(clues[i]));
+          for (int j = 0; j < outcomes[i].length; j++) {
+            System.out.println(Arrays.toString(outcomes[i][j]));
+          }
+        }
+    }
   }
 
   // @Test
-  // public void testSolvePuzzle () {
-  //   for (int i = 0; i < clues.length; i++) {
-  //     assertEquals(outcomes[i], UploadedSkyScraper.solvePuzzle(clues[i]));
-  //   }
+  // public void correctTest () {
+  //   // try {
+  //   //   Thread.sleep(20000);
+  //   // } catch (Exception e) {};
+  //   int[][] turnedOutcome = turnOutcome(outcomes[0], 2);
+  //   int[] turnedClues = turnClues(clues[0], 2);
+  //   System.out.println(Arrays.toString(turnedClues));
+  //   SkyScrapersReal.printArr(turnedOutcome);
+  //   long start = System.currentTimeMillis();
+  //   assertEquals(turnedOutcome, SkyScrapersReal.solvePuzzle(turnedClues));
+  //   long end = System.currentTimeMillis();
+  //   System.out.println("Time:" + (end - start));
   // }
 
-  // @Test
-  // public void testSolveRandomPuzzle () {
-  //   for (int i = 0; i < clues.length; i++) {
-  //     for (int rotate = 1; rotate < 4; rotate++) {
-  //       int[][] turnedOutcome = turnOutcome(outcomes[i], rotate);
-  //       int[] turnedClues = turnClues(clues[i], rotate);
-  //       long start = System.currentTimeMillis();
-  //       assertEquals(turnedOutcome, UploadedSkyScraper.solvePuzzle(turnedClues));
-  //       long end = System.currentTimeMillis();
-  //       System.out.println("Time:" + (end - start));
-  //       if (end - start > 1000) {
-  //         System.out.println("i" + i);
-  //         System.out.println("rotate" + rotate);
-  //         System.out.println(Arrays.toString(turnedClues));
-  //         System.out.println(Arrays.toString(turnedOutcome));
-  //       }
-  //     }
-  //   }
-  // }
+  @Test
+  public void testSolveRandomPuzzle () {
+    for (int i = 0; i < clues.length; i++) {
+      for (int rotate = 1; rotate < 4; rotate++) {
+        int[][] turnedOutcome = turnOutcome(outcomes[i], rotate);
+        int[] turnedClues = turnClues(clues[i], rotate);
+        System.out.println(Arrays.toString(turnedClues));
+        long start = System.currentTimeMillis();
+        assertEquals(turnedOutcome, UploadedSkyScraper.solvePuzzle(turnedClues));
+        long end = System.currentTimeMillis();
+        System.out.println("Time:" + (end - start));
+        if (end - start > 1000) {
+          System.out.println("i" + i);
+          System.out.println("rotate" + rotate);
+          System.out.println(Arrays.toString(turnedClues));
+          for (int j = 0; j < turnedOutcome.length; j++) {
+            System.out.println(Arrays.toString(turnedOutcome[j]));
+          }
+        }
+      }
+    }
+  }
 
   /**
    * rotate the array 90 degrees

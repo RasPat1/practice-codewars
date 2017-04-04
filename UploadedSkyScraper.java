@@ -8,6 +8,8 @@ import java.util.Arrays;
 public class UploadedSkyScraper {
 
   static List<int[]> allRowPermutations;
+  static int[] ruleUses = new int[10];
+
 
   public static int[][] solvePuzzle (int[] clues) {
     int sideLength = (clues.length + 1) / 4;
@@ -31,7 +33,7 @@ public class UploadedSkyScraper {
     count[0] = 0;
 
     solution = fillInGrid(solution, getPossibleRowsWithLocking(solution), lockGrid, 0,  clues, count);
-
+    System.out.println(Arrays.toString(ruleUses));
     return solution;
   }
 
@@ -126,36 +128,40 @@ public class UploadedSkyScraper {
 
   public static List<int[]> maxFilteredRows(int[][] solution, List<int[]> rows, int[] clues, int rowNum) {
     List<int[]> maxFilteredRows = new ArrayList<int[]>(rows.size());
+    int dim = solution.length;
     for (int[] row : rows) {
       // Start by using row clues to filter
 
-      int clueNum1 = solution.length + rowNum;
+      int clueNum1 = dim + rowNum;
       int clueNum2 = clues.length - 1 - rowNum;
       int clueVal1 = clues[clueNum1];
       int clueVal2 = clues[clueNum2];
 
       if (clueVal2 != 0 && getVisibleBuildings(row) != clueVal2) {
+        ruleUses[0]++;
         continue;
       }
 
-      int[] reverseArray = new int[row.length];
+      int[] reverseArray = new int[dim];
 
-      for (int i = 0; i < row.length; i++) {
-        reverseArray[i] = row[row.length - 1 - i];
+      for (int i = 0; i < dim; i++) {
+        reverseArray[i] = row[dim - 1 - i];
       }
 
       if (clueVal1 != 0 && getVisibleBuildings(reverseArray) != clueVal1) {
+        ruleUses[1]++;
         continue;
       }
 
 
       int maxPos = -1;
       Boolean hasZero = false;
-      for (int i = 0; i < row.length; i++) {
-        if (row[i] == solution.length) {
+      for (int i = 0; i < dim; i++) {
+        if (row[i] == dim) {
           maxPos = i;
         }
       }
+
       if (maxPos != -1 && clues[maxPos] != 0) {
         int[] col = new int[rowNum + 1];
         for (int j = 0; j < col.length - 1; j++) {
@@ -165,15 +171,24 @@ public class UploadedSkyScraper {
             break;
           }
         }
-        col[rowNum] = solution.length;
+        col[rowNum] = dim;
         if (!hasZero) {
-          col[rowNum] = solution.length;
+          col[rowNum] = dim;
           if (getVisibleBuildings(col) != clues[maxPos]) {
+            ruleUses[3]++;
             continue;
           }
         }
       }
-    maxFilteredRows.add(row);
+
+      // from the other direction
+      int bottomClueNum = dim *3 - maxPos - 1;
+      if (clues[bottomClueNum] != 0 && clues[bottomClueNum] > dim - rowNum + 1) {
+        ruleUses[4]++;
+        continue;
+      }
+
+      maxFilteredRows.add(row);
     }
 
     return maxFilteredRows;
@@ -310,7 +325,7 @@ public class UploadedSkyScraper {
   }
 
   public static int[] getRowCol(int[][] solution, int clueNum) {
-    List<Integer> list = new ArrayList<Integer>();
+    int[] result = new int[solution.length];
     int section = clueNum / solution.length;
     Boolean backwards = section == 1 || section == 2;
     Boolean isCol = section == 0 || section == 2;
@@ -323,19 +338,20 @@ public class UploadedSkyScraper {
     for (int i = 0; i < solution.length; i++) {
 
       if (isCol) {
-        list.add(solution[i][index]);
+        result[i] = solution[i][index];
       } else {
-        list.add(solution[index][i]);
+        result[i] = solution[index][i];
       }
     }
 
     if (backwards) {
-      Collections.reverse(list);
+      for (int i = 0; i < solution.length / 2; i++) {
+        int tmp = result[i];
+        result[i] = result[solution.length - 1 - i];
+        result[solution.length - 1 - i] = tmp;
+      }
     }
-    int[] result = new int[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      result[i] = list.get(i);
-    }
+
     return result;
   }
 

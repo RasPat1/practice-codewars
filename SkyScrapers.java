@@ -8,6 +8,7 @@ import java.util.Arrays;
 public class SkyScrapers {
 
   static List<int[]> allRowPermutations;
+  static List<Set<Integer>> buildingsInColumn = new ArrayList<Set<Integer>>();
 
   public static int[][] solvePuzzle (int[] clues) {
     int sideLength = (clues.length + 1) / 4;
@@ -37,12 +38,33 @@ public class SkyScrapers {
 
     printArr(solution);
 
+    for (int j = 0; j < solution.length; j++) {
+      Set<Integer> colSet = new HashSet<Integer>();
+      for (int i = 0; i < solution.length; i++) {
+        if (solution[i][j] != 0) {
+          // colSet.add(solution[i][j]);
+        }
+      }
+      buildingsInColumn.add(colSet);
+    }
+    debugColSet();
     // solveByClues(solution, clues);
     // solution = guess(solution, clues, count);
     solution = fillInGrid(solution, getPossibleRowsWithLocking(solution), lockGrid, 0,  clues, count);
     printArr(solution);
     System.out.println("iterations:" + count[0]);
     return solution;
+  }
+
+  public static void debugColSet() {
+    for (int j = 0; j < buildingsInColumn.size(); j++) {
+      System.out.println();
+      System.out.print("[");
+      for (int i : buildingsInColumn.get(j)) {
+        System.out.print(i + ",");
+      }
+      System.out.print("]");
+    }
   }
 
   public static int[] getNextEmptySquare(int[][] solution) {
@@ -150,48 +172,59 @@ public class SkyScrapers {
   // given a solution return all possible values for the specifed row
   public static List<int[]> getPossibleRowsWithPartialCompletion(int[][] solution, List<int[]> possibleWithLocking, int rowNum) {
     List<int[]> possibleForRow = new ArrayList<int[]>();
-    // System.out.println("START FILTERING DSTEP TWO");
-    // printArr(solution);
-    // System.out.println("filtering form " + possibleWithLocking.size() + " rows");
-    // for (int[] i: possibleWithLocking) {
-    //   System.out.println(Arrays.toString(i));
-    // }
-    List<Set<Integer>> buildingsInColumn = new ArrayList<Set<Integer>>();
-
-    for (int i = 0; i < solution.length; i++) {
-      Set<Integer> set = new HashSet<Integer>();
-      buildingsInColumn.add(set);
-    }
-
-    for (int i = 0; i < solution.length; i++) {
-      for (int j = 0; j < solution.length; j++) {
-        int val = solution[i][j];
-        if (val != 0 && i != rowNum) {
-          buildingsInColumn.get(j).add(val);
-        }
-      }
-    }
-
-    // System.out.println("These are teh buildigns already in teh column");
-    // for (int i = 0; i < buildingsInColumn.size(); i++) {
-    //   System.out.println("COlumn: " + i);
-    //   printSet(buildingsInColumn.get(i));
-    // }
-
+    // debugColSet();
     for (int[] row : possibleWithLocking) {
-      Boolean isAMatch = true;
-      for (int i = 0; i < row.length; i++) {
-        int valToCheck = row[i];
-        if (buildingsInColumn.get(i).contains(row[i])) {
-          isAMatch = false;
+      Boolean addIt = true;
+      for (int j = 0; j < solution.length; j++) {
+        // System.out.println(row[j]);
+        // System.out.println(Arrays.toString(buildingsInColumn.get(j).toArray()));
+        if (addIt && buildingsInColumn.get(j).contains(row[j])) {
+          addIt = false;
           break;
         }
       }
-
-      if (isAMatch) {
+      if (addIt) {
         possibleForRow.add(row);
       }
     }
+
+
+    // List<Set<Integer>> buildingsInColumn = new ArrayList<Set<Integer>>();
+
+    // for (int i = 0; i < solution.length; i++) {
+    //   Set<Integer> set = new HashSet<Integer>();
+    //   buildingsInColumn.add(set);
+    // }
+
+    // for (int i = 0; i < solution.length; i++) {
+    //   for (int j = 0; j < solution.length; j++) {
+    //     int val = solution[i][j];
+    //     if (val != 0 && i != rowNum) {
+    //       buildingsInColumn.get(j).add(val);
+    //     }
+    //   }
+    // }
+
+    // // System.out.println("These are teh buildigns already in teh column");
+    // // for (int i = 0; i < buildingsInColumn.size(); i++) {
+    // //   System.out.println("COlumn: " + i);
+    // //   printSet(buildingsInColumn.get(i));
+    // // }
+
+    // for (int[] row : possibleWithLocking) {
+    //   Boolean isAMatch = true;
+    //   for (int i = 0; i < row.length; i++) {
+    //     int valToCheck = row[i];
+    //     if (buildingsInColumn.get(i).contains(row[i])) {
+    //       isAMatch = false;
+    //       break;
+    //     }
+    //   }
+
+    //   if (isAMatch) {
+    //     possibleForRow.add(row);
+    //   }
+    // }
 
 
 
@@ -240,6 +273,23 @@ public class SkyScrapers {
     return visibleBuildings;
   }
 
+  public static Boolean getVisibleBuildings(int[] row, int clueVal) {
+    int visibleBuildings = 0;
+    int maxHeight = -1;
+
+    for (int height : row) {
+
+      if (height > maxHeight) {
+        visibleBuildings++;
+        maxHeight = height;
+      }
+      if (visibleBuildings > clueVal) {
+        return false;
+      }
+    }
+    return visibleBuildings == clueVal;
+  }
+
   public static List<int[]> maxFilteredRows(int[][] solution, List<int[]> rows, int[] clues, int rowNum) {
     List<int[]> maxFilteredRows = new ArrayList<int[]>(rows.size());
     for (int[] row : rows) {
@@ -250,7 +300,7 @@ public class SkyScrapers {
       int clueVal1 = clues[clueNum1];
       int clueVal2 = clues[clueNum2];
 
-      if (clueVal2 != 0 && getVisibleBuildings(row) != clueVal2) {
+      if (clueVal2 != 0 && !getVisibleBuildings(row, clueVal2)) {
         continue;
       }
 
@@ -260,14 +310,14 @@ public class SkyScrapers {
         reverseArray[i] = row[row.length - 1 - i];
       }
 
-      if (clueVal1 != 0 && getVisibleBuildings(reverseArray) != clueVal1) {
+      if (clueVal1 != 0 && !getVisibleBuildings(reverseArray, clueVal1)) {
         continue;
       }
 
       // maybe just do tha basics and avoid columns with double vals!
 
 
-      // if (rowNum == 0) { // only do this intensive thing at the earliest moments
+      if (rowNum > -1) { // only do this intensive thing at the earliest moments
         int maxPos = -1;
         Boolean hasZero = false;
         for (int i = 0; i < row.length; i++) {
@@ -286,39 +336,19 @@ public class SkyScrapers {
           }
           col[rowNum] = solution.length;
           if (!hasZero) {
-            // printArr(solution);
-            // System.out.println("Somethign in here is wrong");
-            // System.out.println("rowNum:" + rowNum);
-            // System.out.println("maxPos:" + maxPos);
-            // System.out.println("clueValue: " + clues[maxPos]);
-            // System.out.println(Arrays.toString(col));
             col[rowNum] = solution.length;
-            int count = getVisibleBuildings(col);
-            // System.out.println("We're going to skip out on this nugget");
-            // System.out.println(Arrays.toString(col));
-            if (count != clues[maxPos]) {
-
-              //     try {
-              //   Thread.sleep(10000);
-              // } catch (Exception e) {}
+            // int count = getVisibleBuildings(col);
+            // if (count != clues[maxPos]) {
+            //   continue;
+            // }
+            if (!getVisibleBuildings(col, clues[maxPos])) {
               continue;
             }
           }
         }
-        // else if (clues[(solution.length * 3) - maxPos - 1] != 0) {
-          // if (solution.length - rowNum + 1 != clues)
-        // }
-      // }
+      }
 
-
-
-
-
-      // We have 8 column clues to compare to
-      // is it worth it?
-
-      // Then use each set of column clues to filter
-      maxFilteredRows.push(row);
+      maxFilteredRows.add(row);
     }
 
     return maxFilteredRows;
@@ -333,34 +363,21 @@ public class SkyScrapers {
     // try to fill in grid a bit before getting rows and what not.
 
     List<int[]> possibleRows = possibleRowsWithLocking.get(rowNum);
-    // System.out.println("rowCountBeforeFiltering" + possibleRows.size());
-
     List<int[]> possibleRowsFromPartialCompleteionAndLocking = getPossibleRowsWithPartialCompletion(solution, possibleRows, rowNum);
-    List<int[]> maxFilteredRows = maxFilteredRows(solution, possibleRowsFromPartialCompleteionAndLocking, clues, rowNum);
-    // for (int[] row: maxFilteredRows) {
-    //   System.out.println("rows:" + Arrays.toString(row));
-    // }
-
-    // System.out.println("Count of rows:" + maxFilteredRows.size());
-    // System.out.println("Count of rows before:" + possibleRowsFromPartialCompleteionAndLocking.size());
-    // System.out.println(clues);
-    // printArr(solution);
-    // try {
-    //   Thread.sleep(10000);
-    // } catch (Exception e) {}
-    // System.out.println("rowCountAfterFiltering" + possibleRowsFromPartialCompleteionAndLocking.size());
-    // if (rowNum == 1) {
-      // for (int i = 0; i < possibleRowsFromPartialCompleteionAndLocking.size(); i++) {
-        // printArr(solution);
-        // System.out.println("rowNum: " + rowNum);
-        // System.out.println("iteration: " + count[0]);
-        // System.out.println("lockign size" + possibleRowsFromPartialCompleteionAndLocking.size());
-      // }
+    List<int[]> maxFilteredRows = possibleRowsFromPartialCompleteionAndLocking.size() > 1 ?
+      maxFilteredRows(solution, possibleRowsFromPartialCompleteionAndLocking, clues, rowNum) :
+      possibleRowsFromPartialCompleteionAndLocking;
+    // if (count[0] % 1000 == 0) {
+    //   System.out.println("rowNum: " + rowNum + ":" + possibleRows.size() + "->" + possibleRowsFromPartialCompleteionAndLocking.size() + "->" + maxFilteredRows.size());
     // }
     for (int i = 0; i < maxFilteredRows.size(); i++) {
       count[0]++;
-      // int[] row = new int[solution.length];
-      solution[rowNum] = Arrays.copyOf(maxFilteredRows.get(i), solution.length);
+      int[] row = maxFilteredRows.get(i);
+      // solution[rowNum] = Arrays.copyOf(maxFilteredRows.get(i), solution.length);
+      for (int j = 0; j < solution.length; j++) {
+        solution[rowNum][j] = row[j];
+        buildingsInColumn.get(j).add(row[j]);
+      }
       clearLaterRows(solution, rowNum, lockGrid);
 
       if (isLastRow) {
@@ -374,6 +391,11 @@ public class SkyScrapers {
             return result;
           }
         }
+      }
+      for (int j = 0; j < solution.length; j++) {
+        // if (lockGrid[rowNum][j] == 0) {
+          buildingsInColumn.get(j).remove(row[j]);
+        // }
       }
     }
 
@@ -538,7 +560,7 @@ public class SkyScrapers {
   }
 
   public static int[] getRowCol(int[][] solution, int clueNum) {
-    List<Integer> list = new ArrayList<Integer>();
+    int[] result = new int[solution.length];
     int section = clueNum / solution.length;
     Boolean backwards = section == 1 || section == 2;
     Boolean isCol = section == 0 || section == 2;
@@ -551,19 +573,20 @@ public class SkyScrapers {
     for (int i = 0; i < solution.length; i++) {
 
       if (isCol) {
-        list.add(solution[i][index]);
+        result[i] = solution[i][index];
       } else {
-        list.add(solution[index][i]);
+        result[i] = solution[index][i];
       }
     }
 
     if (backwards) {
-      Collections.reverse(list);
+      for (int i = 0; i < solution.length / 2; i++) {
+        int tmp = result[i];
+        result[i] = result[solution.length - 1 - i];
+        result[solution.length - 1 - i] = tmp;
+      }
     }
-    int[] result = new int[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      result[i] = list.get(i);
-    }
+
     return result;
   }
 
